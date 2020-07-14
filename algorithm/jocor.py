@@ -176,8 +176,7 @@ class JoCoR:
                 difflabel = pred1.cpu()[ind_correction] != labels[ind_correction]
                 update_label_idx = [equalpred[i] and difflabel[i] for i in range(len(equalpred))]
                 to_be_corrected=ind_correction[equalpred]
-                #correct is based on raw label
-                #self.train_dataset.train_noisy_labels[indexes] = self.train_dataset.train_noisy_labels_raw[indexes]
+
 
                 for idx in to_be_corrected:
                     label = labels[idx]
