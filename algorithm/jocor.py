@@ -161,11 +161,11 @@ class JoCoR:
             # loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch],
             #                                                      ind, self.noise_or_not, self.co_lambda)
             correct_rate = 0.1+epoch//self.epoch_loop*0.1
-            loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch%self.epoch_loop-1],
+            loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch%self.epoch_loop],
                                                                  correct_rate,ind, self.noise_or_not, self.co_lambda)
             # TODO label correction
             # self.epoch_loop = 1
-            if epoch%self.epoch_loop==0:
+            if epoch>0 and epoch%self.epoch_loop==0:
                 self.train_dataset.train_noisy_labels = copy.deepcopy(self.train_dataset.train_noisy_labels_raw)
                 outputs1 = F.softmax(logits1, dim=1)
                 _, pred1 = torch.max(outputs1.data, 1)

@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.init as init 
 import torch.nn.functional as F
 import torch.optim as optim
-import pt_util
+import model.pt_util as pt_util
 def call_bn(bn, x):
     return bn(x)
 
