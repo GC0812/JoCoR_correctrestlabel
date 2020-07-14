@@ -7,7 +7,7 @@ from data.mnist import MNIST
 import argparse, sys
 import datetime
 from algorithm.jocor import JoCoR
-
+import model.pt_util as pt_util
 
 
 
@@ -170,7 +170,10 @@ def main():
 
     acc_list = []
     # training
-    for epoch in range(1, args.n_epoch):
+    start_epoch = pt_util.restore_latest(model, 'checkpoints')
+    # log_data = pt_util.read_log(LOG_PATH, [])
+
+    for epoch in range(start_epoch, args.n_epoch):
         # train models
         train_acc1, train_acc2, pure_ratio_1_list, pure_ratio_2_list = model.train(train_loader, epoch)
         #TODO update train_loader with label correction
@@ -182,6 +185,9 @@ def main():
                                                        shuffle=True)
         # evaluate models
         test_acc1, test_acc2 = model.evaluate(test_loader)
+
+        # save checkpoint
+        model.save_model('checkpoints/%03d.pt' % epoch)
 
         # save results
         if pure_ratio_1_list is None or len(pure_ratio_1_list) == 0:

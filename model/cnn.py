@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.init as init 
 import torch.nn.functional as F
 import torch.optim as optim
-
+import pt_util
 def call_bn(bn, x):
     return bn(x)
 
@@ -50,6 +50,15 @@ class CNN(nn.Module):
         h = h.view(h.size(0), -1)
         logit=self.linear1(h)
         return logit
+
+    def save_model(self, file_path, num_to_keep=1):
+        pt_util.save(self, file_path, num_to_keep)
+
+    def load_model(self, file_path):
+        pt_util.restore(self, file_path)
+
+    def load_last_model(self, dir_path):
+        return pt_util.restore_latest(self, dir_path)
 
 class MLPNet(nn.Module):
     def __init__(self):

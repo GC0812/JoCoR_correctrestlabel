@@ -39,7 +39,7 @@ def loss_jocor(y_1, y_2, t, forget_rate,correct_rate, ind, noise_or_not, co_lamb
 
     #TODO num_correct
     num_correction = int(correct_rate * len(loss_sorted))
-    ind_correction = ind_sorted[num_correction:]
+    ind_correction = ind_sorted[-num_correction:]
 
     return loss, loss, pure_ratio, pure_ratio, ind_correction
 
