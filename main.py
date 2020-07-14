@@ -167,10 +167,10 @@ def main():
     #     'Epoch [%d/%d] Test Accuracy on the %s test images: Model1 %.4f %% Model2 %.4f ' % (
     #         epoch + 1, args.n_epoch, len(test_dataset), test_acc1, test_acc2))
 
-
     acc_list = []
     # training
-    start_epoch = pt_util.restore_latest(model, 'checkpoints')
+    start_epoch = pt_util.restore_latest(model.model1, 'checkpoints1')
+    start_epoch = pt_util.restore_latest(model.model2, 'checkpoints2')
     # log_data = pt_util.read_log(LOG_PATH, [])
 
     for epoch in range(start_epoch, args.n_epoch):
@@ -187,8 +187,8 @@ def main():
         test_acc1, test_acc2 = model.evaluate(test_loader)
 
         # save checkpoint
-        model.save_model('checkpoints/%03d.pt' % epoch)
-
+        model.model1.save_model('checkpoints1/%03d.pt' % epoch)
+        model.model2.save_model('checkpoints2/%03d.pt' % epoch)
         # save results
         if pure_ratio_1_list is None or len(pure_ratio_1_list) == 0:
             print(
