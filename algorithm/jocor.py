@@ -137,7 +137,7 @@ class JoCoR:
         num_false_correction = 0
 
         _train_labels = [i[0] for i in self.train_dataset.train_labels]
-
+        #self.train_dataset.train_noisy_labels = copy.deepcopy(self.train_dataset.train_noisy_labels_raw)
         for i, (images, labels, indexes) in enumerate(train_loader):
             ind = indexes.cpu().numpy().transpose()
             # print(i)
@@ -160,13 +160,14 @@ class JoCoR:
 
             # loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch],
             #                                                      ind, self.noise_or_not, self.co_lambda)
-            correct_rate = 0.1+epoch//self.epoch_loop*0.1
+            correct_rate = 0.1+epoch//10*0.1
+            test = sum(self.noise_or_not)
             loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch%self.epoch_loop],
                                                                  correct_rate,ind, self.noise_or_not, self.co_lambda)
             # TODO label correction
-            # self.epoch_loop = 1
+            #self.epoch_loop = 1
             if epoch>0 and epoch%self.epoch_loop==0:
-                self.train_dataset.train_noisy_labels = copy.deepcopy(self.train_dataset.train_noisy_labels_raw)
+
                 outputs1 = F.softmax(logits1, dim=1)
                 _, pred1 = torch.max(outputs1.data, 1)
                 outputs2 = F.softmax(logits2, dim=1)
@@ -175,6 +176,7 @@ class JoCoR:
                 difflabel = pred1.cpu()[ind_correction] != labels[ind_correction]
                 update_label_idx = [equalpred[i] and difflabel[i] for i in range(len(equalpred))]
                 to_be_corrected=ind_correction[equalpred]
+
                 for idx in to_be_corrected:
                     label = labels[idx]
                     correction = pred1.cpu()[idx].item()
@@ -185,6 +187,7 @@ class JoCoR:
                 tempidx = np.transpose(self.train_dataset.train_noisy_labels)!=self.train_dataset.train_noisy_labels_raw
                 true_correction = [new_noise_or_not[i] and tempidx[i] for i in range(len(new_noise_or_not))]
                 false_correction = [not new_noise_or_not[i] and tempidx[i] for i in range(len(new_noise_or_not))]
+                num_changedlabel = sum(tempidx)
                 num_correctlabel = sum(new_noise_or_not)
                 num_true_correction = sum(true_correction)
                 num_false_correction = sum(false_correction)
