@@ -17,7 +17,7 @@ def kl_loss_compute(pred, soft_targets, reduce=True):
 
 
 
-def loss_jocor(y_1, y_2, t, forget_rate, ind, noise_or_not, co_lambda=0.1):
+def loss_jocor(y_1, y_2, t, forget_rate,correct_rate, ind, noise_or_not, co_lambda=0.1):
 
     loss_pick_1 = F.cross_entropy(y_1, t, reduce = False) * (1-co_lambda)
     loss_pick_2 = F.cross_entropy(y_2, t, reduce = False) * (1-co_lambda)
@@ -37,6 +37,10 @@ def loss_jocor(y_1, y_2, t, forget_rate, ind, noise_or_not, co_lambda=0.1):
     # exchange
     loss = torch.mean(loss_pick[ind_update])
 
-    return loss, loss, pure_ratio, pure_ratio
+    #TODO num_correct
+    num_correction = int(correct_rate * len(loss_sorted))
+    ind_correction = ind_sorted[num_correction:]
+
+    return loss, loss, pure_ratio, pure_ratio, ind_correction
 
 

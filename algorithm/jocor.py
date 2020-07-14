@@ -9,6 +9,7 @@ from common.utils import accuracy
 
 from algorithm.loss import loss_jocor
 
+import copy
 
 class JoCoR:
     def __init__(self, args, train_dataset, device, input_channel, num_classes):
@@ -26,6 +27,7 @@ class JoCoR:
             forget_rate = args.forget_rate
 
         self.noise_or_not = train_dataset.noise_or_not
+        self.train_dataset = train_dataset
 
         # Adjust learning rate and betas for Adam Optimizer
         mom1 = 0.9
@@ -40,9 +42,14 @@ class JoCoR:
         # define drop rate schedule
         self.rate_schedule = np.ones(args.n_epoch) * forget_rate
         self.rate_schedule[:args.num_gradual] = np.linspace(0, forget_rate ** args.exponent, args.num_gradual)
+        ##TODO define correction rate schedule
+        self.epoch_loop = 10
+        self.rate_schedule=self.rate_schedule[:self.epoch_loop]
+
 
         self.device = device
         self.num_iter_per_epoch = args.num_iter_per_epoch
+        print('self.num_iter_per_epoch',self.num_iter_per_epoch)
         self.print_freq = args.print_freq
         self.co_lambda = args.co_lambda
         self.n_epoch = args.n_epoch
@@ -72,12 +79,17 @@ class JoCoR:
     # Evaluate the Model
     def evaluate(self, test_loader):
         print('Evaluating ...')
+        num_of_batch = 50 #gc
         self.model1.eval()  # Change model to 'eval' mode.
         self.model2.eval()  # Change model to 'eval' mode
 
         correct1 = 0
         total1 = 0
-        for images, labels, _ in test_loader:
+
+        # for images, labels, _ in test_loader: #gc
+        for i, (images, labels, _) in enumerate(test_loader):
+            if i > num_of_batch:
+                break
             images = Variable(images).to(self.device)
             logits1 = self.model1(images)
             outputs1 = F.softmax(logits1, dim=1)
@@ -87,14 +99,19 @@ class JoCoR:
 
         correct2 = 0
         total2 = 0
-        for images, labels, _ in test_loader:
+        print('model1 done.')
+
+        for j, (images, labels, _) in enumerate(test_loader):
+        # for images, labels, _ in test_loader:
+            if j > num_of_batch:
+                break
             images = Variable(images).to(self.device)
             logits2 = self.model2(images)
             outputs2 = F.softmax(logits2, dim=1)
             _, pred2 = torch.max(outputs2.data, 1)
             total2 += labels.size(0)
             correct2 += (pred2.cpu() == labels).sum()
-
+        print('model2 done.')
         acc1 = 100 * float(correct1) / float(total1)
         acc2 = 100 * float(correct2) / float(total2)
         return acc1, acc2
@@ -114,9 +131,16 @@ class JoCoR:
         train_correct2 = 0
         pure_ratio_1_list = []
         pure_ratio_2_list = []
+        num_correction=0
+        num_correctlabel = 0
+        num_true_correction = 0
+        num_false_correction = 0
+
+        _train_labels = [i[0] for i in self.train_dataset.train_labels]
 
         for i, (images, labels, indexes) in enumerate(train_loader):
             ind = indexes.cpu().numpy().transpose()
+            # print(i)
             if i > self.num_iter_per_epoch:
                 break
 
@@ -134,8 +158,37 @@ class JoCoR:
             train_total2 += 1
             train_correct2 += prec2
 
-            loss_1, loss_2, pure_ratio_1, pure_ratio_2 = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch],
-                                                                 ind, self.noise_or_not, self.co_lambda)
+            # loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch],
+            #                                                      ind, self.noise_or_not, self.co_lambda)
+            correct_rate = 0.1+epoch//self.epoch_loop*0.1
+            loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch%self.epoch_loop-1],
+                                                                 correct_rate,ind, self.noise_or_not, self.co_lambda)
+            # TODO label correction
+            # self.epoch_loop = 1
+            if epoch%self.epoch_loop==0:
+                self.train_dataset.train_noisy_labels = copy.deepcopy(self.train_dataset.train_noisy_labels_raw)
+                outputs1 = F.softmax(logits1, dim=1)
+                _, pred1 = torch.max(outputs1.data, 1)
+                outputs2 = F.softmax(logits2, dim=1)
+                _, pred2 = torch.max(outputs2.data, 1)
+                equalpred = pred1.cpu()[ind_correction]==pred2.cpu()[ind_correction]
+                difflabel = pred1.cpu()[ind_correction] != labels[ind_correction]
+                update_label_idx = [equalpred[i] and difflabel[i] for i in range(len(equalpred))]
+                to_be_corrected=ind_correction[equalpred]
+                for idx in to_be_corrected:
+                    label = labels[idx]
+                    correction = pred1.cpu()[idx].item()
+                    self.train_dataset.train_noisy_labels[indexes[idx]] = correction
+                    num_correction+=1
+                #evaluate correction
+                new_noise_or_not = np.transpose(self.train_dataset.train_noisy_labels) == np.transpose(_train_labels)
+                tempidx = np.transpose(self.train_dataset.train_noisy_labels)!=self.train_dataset.train_noisy_labels_raw
+                true_correction = [new_noise_or_not[i] and tempidx[i] for i in range(len(new_noise_or_not))]
+                false_correction = [not new_noise_or_not[i] and tempidx[i] for i in range(len(new_noise_or_not))]
+                num_correctlabel = sum(new_noise_or_not)
+                num_true_correction = sum(true_correction)
+                num_false_correction = sum(false_correction)
+                correction_ratio = num_correctlabel / len(_train_labels)
 
             self.optimizer.zero_grad()
             loss_1.backward()
@@ -145,13 +198,15 @@ class JoCoR:
             pure_ratio_2_list.append(100 * pure_ratio_2)
 
             if (i + 1) % self.print_freq == 0:
+            # if (i + 1) % 1 == 0:
                 print(
-                    'Epoch [%d/%d], Iter [%d/%d] Training Accuracy1: %.4F, Training Accuracy2: %.4f, Loss1: %.4f, Loss2: %.4f, Pure Ratio1 %.4f %% Pure Ratio2 %.4f %%'
+                    'Epoch [%d/%d], Iter [%d/%d] Training Accuracy1: %.4F, Training Accuracy2: %.4f, Loss: %.4f, Pure Ratio %.4f, num_correctlabel: %d, num_true_correction: %d, num_false_correction: %d'
                     % (epoch + 1, self.n_epoch, i + 1, len(self.train_dataset) // self.batch_size, prec1, prec2,
-                       loss_1.data.item(), loss_2.data.item(), sum(pure_ratio_1_list) / len(pure_ratio_1_list), sum(pure_ratio_2_list) / len(pure_ratio_2_list)))
+                       loss_1.data.item(), sum(pure_ratio_1_list) / len(pure_ratio_1_list), num_correctlabel, num_true_correction,num_false_correction))
 
         train_acc1 = float(train_correct) / float(train_total)
         train_acc2 = float(train_correct2) / float(train_total2)
+
         return train_acc1, train_acc2, pure_ratio_1_list, pure_ratio_2_list
 
     def adjust_learning_rate(self, optimizer, epoch):

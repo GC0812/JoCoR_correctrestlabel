@@ -1,17 +1,17 @@
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
 
-
-def plot_result(accuracy_list,pure_ratio_list,name="test.png"):
-    plt.figure(figsize=(16, 6))
-    plt.subplot(1, 2, 1)
-    plt.plot(accuracy_list, label='test_accuracy')
-    plt.subplot(1, 2, 2)
-    plt.plot(pure_ratio_list, label='test_pure_ratio')
-    plt.savefig(name)
+#
+# def plot_result(accuracy_list,pure_ratio_list,name="test.png"):
+#     plt.figure(figsize=(16, 6))
+#     plt.subplot(1, 2, 1)
+#     plt.plot(accuracy_list, label='test_accuracy')
+#     plt.subplot(1, 2, 2)
+#     plt.plot(pure_ratio_list, label='test_pure_ratio')
+#     plt.savefig(name)
 
 
 def accuracy(logit, target, topk=(1,)):

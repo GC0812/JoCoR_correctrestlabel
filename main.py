@@ -25,7 +25,7 @@ parser.add_argument('--dataset', type=str, help='mnist, cifar10, or cifar100', d
 parser.add_argument('--n_epoch', type=int, default=200)
 parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--print_freq', type=int, default=50)
-parser.add_argument('--num_workers', type=int, default=4, help='how many subprocesses to use for data loading')
+parser.add_argument('--num_workers', type=int, default=0, help='how many subprocesses to use for data loading')
 parser.add_argument('--num_iter_per_epoch', type=int, default=400)
 parser.add_argument('--epoch_decay_start', type=int, default=80)
 parser.add_argument('--gpu', type=int, default=None)
@@ -51,6 +51,7 @@ else:
 
 # Hyper Parameters
 batch_size = 128
+batch_size_test = 128
 learning_rate = args.lr
 
 # load dataset
@@ -145,10 +146,11 @@ def main():
                                                shuffle=True)
 
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                              batch_size=batch_size,
+                                              batch_size=batch_size_test,
                                               num_workers=args.num_workers,
                                               drop_last=True,
                                               shuffle=False)
+    print(len(train_dataset))
     # Define models
     print('building model...')
 
@@ -159,11 +161,11 @@ def main():
     train_acc2 = 0
 
     # evaluate models with random weights
-    test_acc1, test_acc2 = model.evaluate(test_loader)
-
-    print(
-        'Epoch [%d/%d] Test Accuracy on the %s test images: Model1 %.4f %% Model2 %.4f ' % (
-            epoch + 1, args.n_epoch, len(test_dataset), test_acc1, test_acc2))
+    # test_acc1, test_acc2 = model.evaluate(test_loader)
+    #
+    # print(
+    #     'Epoch [%d/%d] Test Accuracy on the %s test images: Model1 %.4f %% Model2 %.4f ' % (
+    #         epoch + 1, args.n_epoch, len(test_dataset), test_acc1, test_acc2))
 
 
     acc_list = []
@@ -171,7 +173,13 @@ def main():
     for epoch in range(1, args.n_epoch):
         # train models
         train_acc1, train_acc2, pure_ratio_1_list, pure_ratio_2_list = model.train(train_loader, epoch)
-
+        #TODO update train_loader with label correction
+        if epoch % 10 == 0:
+            train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                                       batch_size=batch_size,
+                                                       num_workers=args.num_workers,
+                                                       drop_last=True,
+                                                       shuffle=True)
         # evaluate models
         test_acc1, test_acc2 = model.evaluate(test_loader)
 
