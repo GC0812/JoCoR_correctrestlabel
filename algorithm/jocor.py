@@ -162,7 +162,7 @@ class JoCoR:
             #                                                      ind, self.noise_or_not, self.co_lambda)
             correct_rate = 0.1+epoch//10*0.1
             test = sum(self.noise_or_not)
-            loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch%self.epoch_loop],
+            loss_1, loss_2, pure_ratio_1, pure_ratio_2, ind_correction = self.loss_fn(logits1, logits2, labels, self.rate_schedule[epoch]-epoch//10*0.1,
                                                                  correct_rate,ind, self.noise_or_not, self.co_lambda)
             # TODO label correction
             #self.epoch_loop = 1
@@ -176,6 +176,8 @@ class JoCoR:
                 difflabel = pred1.cpu()[ind_correction] != labels[ind_correction]
                 update_label_idx = [equalpred[i] and difflabel[i] for i in range(len(equalpred))]
                 to_be_corrected=ind_correction[equalpred]
+                #correct is based on raw label
+                #self.train_dataset.train_noisy_labels[indexes] = self.train_dataset.train_noisy_labels_raw[indexes]
 
                 for idx in to_be_corrected:
                     label = labels[idx]
