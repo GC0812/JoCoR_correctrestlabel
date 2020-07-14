@@ -44,7 +44,7 @@ class JoCoR:
         self.rate_schedule[:args.num_gradual] = np.linspace(0, forget_rate ** args.exponent, args.num_gradual)
         ##TODO define correction rate schedule
         self.epoch_loop = 10
-        self.rate_schedule=self.rate_schedule[:self.epoch_loop]
+        #self.rate_schedule=self.rate_schedule[:self.epoch_loop]
 
 
         self.device = device
